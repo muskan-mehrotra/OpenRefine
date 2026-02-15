@@ -27,13 +27,16 @@
 
 package com.google.refine.expr.functions.date;
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 
-import org.slf4j.LoggerFactory;
-import org.testng.Assert;
-import org.testng.annotations.BeforeTest;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.google.refine.grel.GrelTestBase;
 
@@ -41,10 +44,16 @@ public class NowTests extends GrelTestBase {
 
     private DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd-HH:mm:ss.SSSSSSSSSX");
 
-    @Override
-    @BeforeTest
-    public void init() {
-        logger = LoggerFactory.getLogger(this.getClass());
+    @BeforeEach
+    public void setupJUnit() {
+        super.registerGRELParser();
+        super.setUp();
+    }
+
+    @AfterEach
+    public void tearDownJUnit() {
+        super.tearDown();
+        super.unregisterGRELParser();
     }
 
     @Test
@@ -53,8 +62,16 @@ public class NowTests extends GrelTestBase {
         OffsetDateTime source = OffsetDateTime.parse("20180430-23:55:44.000789000Z",
                 formatter);
 
-        Assert.assertTrue(invoke("now") instanceof OffsetDateTime);
-        Assert.assertTrue(((OffsetDateTime) invoke("now")).isAfter(source));
+        assertInstanceOf(OffsetDateTime.class, invoke("now"));
+        assertTrue(((OffsetDateTime) invoke("now")).isAfter(source));
+    }
+
+    @Test
+    public void testNowWithArgs() {
+        // Now should return null when called with arguments
+        assertNull(invoke("now", "arg1"));
+        assertNull(invoke("now", 1, 2, 3));
+        assertNull(invoke("now", "arg1", "arg2"));
     }
 
 }
