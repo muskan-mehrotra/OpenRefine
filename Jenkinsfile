@@ -1,5 +1,10 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'maven:3.9-eclipse-temurin-17'
+            args '-v /root/.m2:/root/.m2'
+        }
+    }
     
     stages {
         stage('Checkout') {
@@ -12,9 +17,9 @@ pipeline {
             steps {
                 sh '''
                     echo "Java version:"
-                    java -version || echo "Java not found in PATH"
+                    java -version
                     echo "Maven version:"
-                    mvn -version || echo "Maven not found in PATH"
+                    mvn -version
                     mvn clean compile -DskipTests
                 '''
             }
