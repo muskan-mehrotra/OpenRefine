@@ -1,9 +1,10 @@
 pipeline {
-    agent {
-        docker {
-            image 'maven:3.9-eclipse-temurin-17'
-            args '-v /root/.m2:/root/.m2'
-        }
+    agent any
+    
+    environment {
+        MAVEN_VERSION = '3.9.9'
+        MAVEN_HOME = "${WORKSPACE}/apache-maven-${MAVEN_VERSION}"
+        PATH = "${MAVEN_HOME}/bin:${env.PATH}"
     }
     
     stages {
@@ -13,15 +14,37 @@ pipeline {
             }
         }
         
-        stage('Build') {
+        stage('Setup Maven') {
             steps {
                 sh '''
+                    if ! command -v mvn &> /dev/null; then
+                        echo "Maven not found. Downloading Maven ${MAVEN_VERSION}..."
+                        cd ${WORKSPACE}
+                        if [ "$(uname)" = "Darwin" ]; then
+                            # macOS
+                            curl -L "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" -o maven.tar.gz
+                        else
+                            # Linux
+                            wget "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" -O maven.tar.gz
+                        fi
+                        tar -xzf maven.tar.gz
+                        rm maven.tar.gz
+                        chmod +x ${MAVEN_HOME}/bin/mvn
+                        echo "Maven installed at ${MAVEN_HOME}"
+                    else
+                        echo "Maven found in PATH"
+                    fi
                     echo "Java version:"
                     java -version
                     echo "Maven version:"
                     mvn -version
-                    mvn clean compile -DskipTests
                 '''
+            }
+        }
+        
+        stage('Build') {
+            steps {
+                sh 'mvn clean compile -DskipTests'
             }
         }
         
