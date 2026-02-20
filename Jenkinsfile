@@ -1,17 +1,6 @@
 pipeline {
     agent any
     
-    tools {
-        maven 'Maven'
-        jdk 'JDK'
-    }
-    
-    environment {
-        JAVA_HOME = "${tool 'JDK'}"
-        MAVEN_HOME = "${tool 'Maven'}"
-        PATH = "${MAVEN_HOME}/bin:${JAVA_HOME}/bin:${PATH}"
-    }
-    
     stages {
         stage('Checkout') {
             steps {
@@ -21,7 +10,13 @@ pipeline {
         
         stage('Build') {
             steps {
-                sh 'mvn clean compile -DskipTests'
+                sh '''
+                    echo "Java version:"
+                    java -version || echo "Java not found in PATH"
+                    echo "Maven version:"
+                    mvn -version || echo "Maven not found in PATH"
+                    mvn clean compile -DskipTests
+                '''
             }
         }
         
@@ -32,7 +27,6 @@ pipeline {
             post {
                 always {
                     junit '**/target/surefire-reports/*.xml'
-                    publishTestResults testResultsPattern: '**/target/surefire-reports/*.xml'
                 }
             }
         }
@@ -50,9 +44,6 @@ pipeline {
     }
     
     post {
-        always {
-            cleanWs()
-        }
         success {
             echo 'Pipeline completed successfully'
         }
