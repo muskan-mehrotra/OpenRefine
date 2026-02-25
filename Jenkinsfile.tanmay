@@ -1,0 +1,53 @@
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+    ansiColor('xterm')
+    disableConcurrentBuilds()
+  }
+
+  environment {
+    MAVEN_OPTS = '-Xmx2g'
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Verify Toolchain') {
+      steps {
+        sh 'java -version'
+        sh 'mvn -version'
+      }
+    }
+
+    stage('Build') {
+      steps {
+        sh 'mvn -B -ntp -DskipTests clean package -pl main -am'
+      }
+    }
+
+    stage('Test') {
+      steps {
+        sh 'mvn -B -ntp -pl main -am test'
+      }
+    }
+  }
+
+  post {
+    always {
+      junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+      archiveArtifacts artifacts: '**/target/surefire-reports/*, **/target/report/*, **/target/*.jar', allowEmptyArchive: true
+    }
+    success {
+      echo 'Jenkins CI completed successfully: build + test passed.'
+    }
+    failure {
+      echo 'Jenkins CI failed. Check console output and test reports.'
+    }
+  }
+}
