@@ -1,0 +1,60 @@
+pipeline {
+  agent any
+
+  options {
+    timestamps()
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Build') {
+      steps {
+        sh '''
+          echo "Java version:"
+          java -version || true
+
+          echo "Maven version:"
+          mvn -version || (echo "Maven not found in PATH" && exit 127)
+
+          mvn -B -DskipTests clean compile
+        '''
+      }
+    }
+
+    stage('Test') {
+      steps {
+        sh 'mvn -B test'
+      }
+      post {
+        always {
+          // Publishes test results to the Jenkins "Tests" tab
+          junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
+        }
+      }
+    }
+
+    stage('Package') {
+      steps {
+        sh 'mvn -B -DskipTests package'
+      }
+    }
+  }
+
+  post {
+    always {
+      // Optional: archive jars if present
+      archiveArtifacts allowEmptyArchive: true, artifacts: '**/target/*.jar'
+    }
+    success {
+      echo 'Pipeline completed successfully'
+    }
+    failure {
+      echo 'Pipeline failed'
+    }
+  }
+}
