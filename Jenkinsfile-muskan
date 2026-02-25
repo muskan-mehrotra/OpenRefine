@@ -5,10 +5,8 @@ pipeline {
     timestamps()
   }
 
-  // Uses the Maven tool you configured in Jenkins:
-  // Manage Jenkins -> Tools -> Maven installations
   tools {
-    maven 'Maven3'   // <-- CHANGE this if your Maven tool has a different name
+    maven 'Maven3'   // change only if your Maven tool has a different name
   }
 
   stages {
@@ -27,7 +25,7 @@ pipeline {
           echo "Maven version:"
           mvn -version
 
-          # Build all modules except 'packaging' (mac app bundling fails in CI)
+          # Build all modules except 'packaging'
           mvn -B -DskipTests clean install -pl '!packaging' -am
         '''
       }
@@ -35,12 +33,10 @@ pipeline {
 
     stage('Test (skip packaging)') {
       steps {
-        # Run tests; exclude packaging module as well
         sh "mvn -B test -pl '!packaging' -am"
       }
       post {
         always {
-          // Publish JUnit test results in Jenkins
           junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
         }
       }
