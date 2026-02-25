@@ -5,6 +5,11 @@ pipeline {
     timestamps()
   }
 
+  // Use Maven configured in Jenkins (Manage Jenkins -> Tools)
+  tools {
+    maven 'Maven3'   // <-- must match the Maven tool name in Jenkins
+  }
+
   stages {
     stage('Checkout') {
       steps {
@@ -18,8 +23,8 @@ pipeline {
           echo "Java version:"
           java -version || true
 
-          echo "Maven version:"
-          mvn -version || (echo "Maven not found in PATH" && exit 127)
+          echo "Maven version (from Jenkins tool):"
+          mvn -version
 
           mvn -B -DskipTests clean compile
         '''
@@ -32,7 +37,7 @@ pipeline {
       }
       post {
         always {
-          // Publishes test results to the Jenkins "Tests" tab
+          // Publish JUnit results to Jenkins "Tests" tab
           junit allowEmptyResults: true, testResults: '**/target/surefire-reports/*.xml'
         }
       }
@@ -47,7 +52,6 @@ pipeline {
 
   post {
     always {
-      // Optional: archive jars if present
       archiveArtifacts allowEmptyArchive: true, artifacts: '**/target/*.jar'
     }
     success {
