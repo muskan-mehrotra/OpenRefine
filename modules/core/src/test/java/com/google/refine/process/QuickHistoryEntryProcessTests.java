@@ -29,15 +29,27 @@ package com.google.refine.process;
 
 import static org.mockito.Mockito.mock;
 
+import java.io.IOException;
+import java.io.Writer;
+import java.util.Properties;
+
+import org.testng.Assert;
 import org.testng.annotations.Test;
 
+import com.google.refine.ProjectManager;
+import com.google.refine.ProjectMetadata;
+import com.google.refine.RefineTest;
+import com.google.refine.history.Change;
 import com.google.refine.history.HistoryEntry;
+import com.google.refine.model.AbstractOperation;
 import com.google.refine.model.Project;
 import com.google.refine.util.TestUtils;
 
-public class QuickHistoryEntryProcessTests {
+public class QuickHistoryEntryProcessTests extends RefineTest {
 
     public static class QuickHistoryEntryProcessStub extends QuickHistoryEntryProcess {
+
+        private boolean createHistoryEntryCalled = false;
 
         public QuickHistoryEntryProcessStub(Project project, String briefDescription) {
             super(project, briefDescription);
@@ -47,9 +59,33 @@ public class QuickHistoryEntryProcessTests {
         @Override
         protected HistoryEntry createHistoryEntry(long historyEntryID)
                 throws Exception {
-            return null;
+            createHistoryEntryCalled = true;
+
+            Change change = new Change() {
+                @Override
+                public void apply(Project project) {
+                    // no-op
+                }
+
+                @Override
+                public void revert(Project project) {
+                    // no-op
+                }
+
+                @Override
+                public void save(Writer writer, Properties options) throws IOException {
+                    // no-op
+                }
+            };
+
+            AbstractOperation operation = mock(AbstractOperation.class);
+
+            return new HistoryEntry(historyEntryID, _project, "stub history entry", operation, change);
         }
 
+        public boolean wasCreateHistoryEntryCalled() {
+            return createHistoryEntryCalled;
+        }
     }
 
     @Test
@@ -63,5 +99,20 @@ public class QuickHistoryEntryProcessTests {
                 + "\"quick description\","
                 + "\"immediate\":true,"
                 + "\"status\":\"pending\"}");
+    }
+
+    @Test
+    public void performImmediateUsesStubbedCreateHistoryEntry() throws Exception {
+        Project project = new Project();
+        ProjectMetadata projectMetadata = new ProjectMetadata();
+        ProjectManager.singleton.registerProject(project, projectMetadata);
+
+        QuickHistoryEntryProcessStub process = new QuickHistoryEntryProcessStub(project, "quick description");
+
+        process.performImmediate();
+
+        Assert.assertTrue(process.wasCreateHistoryEntryCalled(), "createHistoryEntry should have been called");
+        Assert.assertEquals(process.getStatus(), "done");
+        Assert.assertEquals(process.getDescription(), "stub history entry");
     }
 }

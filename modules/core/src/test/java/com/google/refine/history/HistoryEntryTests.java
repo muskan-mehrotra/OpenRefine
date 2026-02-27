@@ -28,10 +28,18 @@
 package com.google.refine.history;
 
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.io.Serializable;
+import java.io.StringWriter;
+import java.time.Instant;
+import java.util.Properties;
+import java.util.function.Supplier;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
@@ -112,5 +120,79 @@ public class HistoryEntryTests extends RefineTest {
         // Unknown operations are serialized back as they were parsed
         HistoryEntry entry = HistoryEntry.load(project, unknownOperationJson);
         TestUtils.isSerializedTo(entry, unknownOperationJson, true);
+    }
+
+    /**
+     * Tests the new createWithManager() factory, which allows injecting a mock HistoryEntryManager.
+     * This test verifies that save() correctly delegates to the injected manager - functionality
+     * that was previously untestable because the manager was hardcoded from ProjectManager.singleton.
+     */
+    @Test
+    public void saveDelegatesToInjectedManager() throws Exception {
+        Project testProject = createProject(new String[] { "col1" }, new Serializable[][] { { "val1" } });
+        HistoryEntryManager mockManager = mock(HistoryEntryManager.class);
+
+        Change noOpChange = new Change() {
+            @Override
+            public void apply(Project project) {
+            }
+
+            @Override
+            public void revert(Project project) {
+            }
+
+            @Override
+            public void save(java.io.Writer writer, Properties options) throws IOException {
+            }
+        };
+
+        HistoryEntry entry = HistoryEntry.createWithManager(
+                999L, testProject, "Test entry", null, noOpChange, mockManager);
+
+        StringWriter writer = new StringWriter();
+        Properties options = new Properties();
+        options.setProperty("mode", "save");
+
+        entry.save(writer, options);
+
+        verify(mockManager).save(entry, writer, options);
+    }
+
+    /**
+     * Tests time source injection for HistoryEntry using a mocked Supplier&lt;Instant&gt;.
+     * Verifies that the injected time is used and that time-based serialization is deterministic.
+     */
+    @Test
+    public void createWithManagerUsesMockedTimeSource() throws Exception {
+        Project testProject = createProject(new String[] { "col1" }, new Serializable[][] { { "val1" } });
+        HistoryEntryManager mockManager = mock(HistoryEntryManager.class);
+
+        @SuppressWarnings("unchecked")
+        Supplier<Instant> mockTimeSource = mock(Supplier.class);
+        Instant fixedTime = Instant.parse("2018-08-07T09:06:37Z");
+        when(mockTimeSource.get()).thenReturn(fixedTime);
+
+        Change noOpChange = new Change() {
+            @Override
+            public void apply(Project project) {
+            }
+
+            @Override
+            public void revert(Project project) {
+            }
+
+            @Override
+            public void save(java.io.Writer writer, Properties options) throws IOException {
+            }
+        };
+
+        HistoryEntry entry = HistoryEntry.createWithManager(
+                999L, testProject, "Time test entry", null, noOpChange, mockManager, mockTimeSource);
+
+        Assert.assertEquals(entry.time, fixedTime, "Entry should have the time from mocked time source");
+        verify(mockTimeSource).get();
+
+        String expectedJson = "{\"id\":999,\"description\":\"Time test entry\",\"time\":\"2018-08-07T09:06:37Z\"}";
+        TestUtils.isSerializedTo(entry, expectedJson, false);
     }
 }

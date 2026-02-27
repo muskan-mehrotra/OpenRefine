@@ -38,6 +38,7 @@ import java.io.Writer;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.Properties;
+import java.util.function.Supplier;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -123,16 +124,52 @@ public class HistoryEntry {
     }
 
     protected HistoryEntry(long id, long projectID, String description, AbstractOperation operation, Instant time) {
+        this(id, projectID, description, operation, time, null);
+    }
+
+    /**
+     * Constructor that accepts an optional HistoryEntryManager for dependency injection.
+     * When manager is null, falls back to ProjectManager.singleton.getHistoryEntryManager().
+     * Use the manager parameter in tests to inject a mock; production code should use the
+     * standard constructor which passes null.
+     *
+     * @param manager optional manager to use; null to use the default from ProjectManager
+     */
+    protected HistoryEntry(long id, long projectID, String description, AbstractOperation operation, Instant time,
+            HistoryEntryManager manager) {
         this.id = id;
         this.projectID = projectID;
         this.description = description;
         this.operation = operation;
         this.time = time;
-        this._manager = ProjectManager.singleton.getHistoryEntryManager();
+        this._manager = (manager != null) ? manager : ProjectManager.singleton.getHistoryEntryManager();
         if (this._manager == null) {
             logger.error("Failed to get history entry manager from project manager: "
                     + ProjectManager.singleton);
         }
+    }
+
+    /**
+     * Creates a HistoryEntry with an injectable HistoryEntryManager.
+     * Use this in tests to inject a mock manager for isolated unit testing.
+     * Production code should use {@link #HistoryEntry(long, Project, String, AbstractOperation, Change)}.
+     */
+    public static HistoryEntry createWithManager(long id, Project project, String description,
+            AbstractOperation operation, Change change, HistoryEntryManager manager) {
+        return createWithManager(id, project, description, operation, change, manager, null);
+    }
+
+    /**
+     * Creates a HistoryEntry with injectable HistoryEntryManager and time source.
+     * Use timeSource in tests to inject a mock (e.g. Mockito) for deterministic time-based testing.
+     * When timeSource is null, uses Instant.now().
+     */
+    public static HistoryEntry createWithManager(long id, Project project, String description,
+            AbstractOperation operation, Change change, HistoryEntryManager manager, Supplier<Instant> timeSource) {
+        Instant entryTime = (timeSource != null) ? timeSource.get() : Instant.now();
+        HistoryEntry entry = new HistoryEntry(id, project.id, description, operation, entryTime, manager);
+        entry.setChange(change);
+        return entry;
     }
 
     @JsonProperty("operation_id")
@@ -155,7 +192,7 @@ public class HistoryEntry {
      */
     public void apply(Project project) {
         if (getChange() == null) {
-            ProjectManager.singleton.getHistoryEntryManager().loadChange(this);
+            _manager.loadChange(this);
         }
 
         synchronized (project) {
