@@ -56,7 +56,7 @@ public class CSRFTokenFactory {
 
                             @Override
                             public Instant load(String key) {
-                                return Instant.now();
+                                return now();
                             }
 
                         });
@@ -89,7 +89,17 @@ public class CSRFTokenFactory {
      */
     public boolean validToken(String token) {
         Map<String, Instant> map = tokenCache.asMap();
-        Instant cutoff = Instant.now().minusSeconds(timeToLive);
+        Instant cutoff = now().minusSeconds(timeToLive);
         return map.containsKey(token) && map.get(token).isAfter(cutoff);
+    }
+
+    /**
+     * Time source used by token generation/validation logic.
+     *
+     * Kept protected so tests can override it for deterministic, boundary-focused checks
+     * without changing production behavior.
+     */
+    protected Instant now() {
+        return Instant.now();
     }
 }
