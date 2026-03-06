@@ -1,8 +1,9 @@
 package com.google.refine;
 
+import static org.testng.Assert.assertEquals;
+
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.testng.Assert.assertEquals;
 import org.testng.annotations.Test;
 
 import com.google.refine.model.Project;

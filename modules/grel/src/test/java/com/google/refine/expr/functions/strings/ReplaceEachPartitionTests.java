@@ -1,12 +1,12 @@
 package com.google.refine.expr.functions.strings;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.util.Properties;
-
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.google.refine.expr.EvalError;
 import com.google.refine.expr.ParsingException;
@@ -26,10 +26,19 @@ import com.google.refine.grel.GrelTestBase;
  */
 public class ReplaceEachPartitionTests extends GrelTestBase {
 
-    @BeforeMethod
-    public void setUp() {
-        bindings = new Properties();
+    @BeforeEach
+    public void junitSetUp() {
+        // GrelTestBase lifecycle hooks are TestNG-based, so JUnit tests
+        // need to invoke them explicitly.
+        super.registerGRELParser();
+        super.setUp();
         bindings.put("v", "");
+    }
+
+    @AfterEach
+    public void junitTearDown() {
+        super.tearDown();
+        super.unregisterGRELParser();
     }
 
     // ========================================================================
@@ -40,26 +49,26 @@ public class ReplaceEachPartitionTests extends GrelTestBase {
     @Test
     public void testP1_validInputWithMatch_singleReplacement() {
         // Representative value: "The cow moos" with find=["moo"], replace=["mee"]
-        Object result = invoke("replaceEach", "The cow moos", 
+        Object result = invoke("replaceEach", "The cow moos",
                 new String[]{"moo"}, new String[]{"mee"});
-        assertTrue(result instanceof String);
-        assertEquals(result, "The cow mees");
+        assertInstanceOf(String.class, result);
+        assertEquals("The cow mees", result);
     }
 
     @Test
     public void testP1_validInputWithMatch_multipleReplacements() {
         // Multiple matches in the string
-        Object result = invoke("replaceEach", "The cow moos and moos again", 
+        Object result = invoke("replaceEach", "The cow moos and moos again",
                 new String[]{"moo"}, new String[]{"mee"});
-        assertEquals(result, "The cow mees and mees again");
+        assertEquals("The cow mees and mees again", result);
     }
 
     @Test
     public void testP1_validInputWithMatch_multiplePatterns() {
         // Multiple patterns to find and replace
-        Object result = invoke("replaceEach", "hello world", 
+        Object result = invoke("replaceEach", "hello world",
                 new String[]{"hello", "world"}, new String[]{"hi", "earth"});
-        assertEquals(result, "hi earth");
+        assertEquals("hi earth", result);
     }
 
     // ========================================================================
@@ -70,26 +79,26 @@ public class ReplaceEachPartitionTests extends GrelTestBase {
     @Test
     public void testP2_validInputNoMatch_returnsUnchanged() {
         // Representative value: "Hello world" with find=["xyz"], replace=["abc"]
-        Object result = invoke("replaceEach", "Hello world", 
+        Object result = invoke("replaceEach", "Hello world",
                 new String[]{"xyz"}, new String[]{"abc"});
-        assertTrue(result instanceof String);
-        assertEquals(result, "Hello world");
+        assertInstanceOf(String.class, result);
+        assertEquals("Hello world", result);
     }
 
     @Test
     public void testP2_validInputNoMatch_multiplePatterns() {
         // Multiple non-matching patterns
-        Object result = invoke("replaceEach", "Hello world", 
+        Object result = invoke("replaceEach", "Hello world",
                 new String[]{"foo", "bar", "baz"}, new String[]{"a", "b", "c"});
-        assertEquals(result, "Hello world");
+        assertEquals("Hello world", result);
     }
 
     @Test
     public void testP2_validInputNoMatch_caseSensitive() {
         // Case sensitivity test - "HELLO" should not match "hello"
-        Object result = invoke("replaceEach", "hello world", 
+        Object result = invoke("replaceEach", "hello world",
                 new String[]{"HELLO"}, new String[]{"hi"});
-        assertEquals(result, "hello world");
+        assertEquals("hello world", result);
     }
 
     // ========================================================================
@@ -100,18 +109,18 @@ public class ReplaceEachPartitionTests extends GrelTestBase {
     @Test
     public void testP3_emptyArrays_returnsUnchanged() {
         // Representative value: "abc" with find=[], replace=[]
-        Object result = invoke("replaceEach", "abc", 
+        Object result = invoke("replaceEach", "abc",
                 new String[]{}, new String[]{});
-        assertTrue(result instanceof String);
-        assertEquals(result, "abc");
+        assertInstanceOf(String.class, result);
+        assertEquals("abc", result);
     }
 
     @Test
     public void testP3_emptyArrays_longerString() {
         // Empty arrays with longer input string
-        Object result = invoke("replaceEach", "The quick brown fox jumps over the lazy dog", 
+        Object result = invoke("replaceEach", "The quick brown fox jumps over the lazy dog",
                 new String[]{}, new String[]{});
-        assertEquals(result, "The quick brown fox jumps over the lazy dog");
+        assertEquals("The quick brown fox jumps over the lazy dog", result);
     }
 
     // ========================================================================
@@ -124,18 +133,18 @@ public class ReplaceEachPartitionTests extends GrelTestBase {
         // Representative value: find=["a","b"], replace=["x"]
         // Based on existing tests, when replace array is shorter, 
         // the last replacement value is reused
-        Object result = invoke("replaceEach", "abc", 
+        Object result = invoke("replaceEach", "abc",
                 new String[]{"a", "b"}, new String[]{"x"});
-        assertTrue(result instanceof String);
+        assertInstanceOf(String.class, result);
         // Document actual behavior: last replacement reused
-        assertEquals(result, "xxc");
+        assertEquals("xxc", result);
     }
 
     @Test
     public void testP4_mismatchedArrayLengths_moreReplaceThanFind() {
         // More replacements than find patterns
         // Documented behavior: returns error when replace array is longer than find array
-        Object result = invoke("replaceEach", "abc", 
+        Object result = invoke("replaceEach", "abc",
                 new String[]{"a"}, new String[]{"x", "y", "z"});
         assertTrue(result instanceof EvalError,
                 "Expected EvalError when replace array is longer than find array, got: " + result);
@@ -149,10 +158,10 @@ public class ReplaceEachPartitionTests extends GrelTestBase {
     @Test
     public void testP5_nullStringInput_returnsError() {
         // Representative value: null string with valid arrays
-        Object result = invoke("replaceEach", null, 
+        Object result = invoke("replaceEach", null,
                 new String[]{"a"}, new String[]{"x"});
         // Null input should produce an error
-        assertTrue(result instanceof EvalError, 
+        assertTrue(result instanceof EvalError,
                 "Expected EvalError for null string input, got: " + result);
     }
 
@@ -165,7 +174,7 @@ public class ReplaceEachPartitionTests extends GrelTestBase {
     public void testP6_nullFindArray_returnsError() {
         // Null find array
         Object result = invoke("replaceEach", "abc", null, new String[]{"x"});
-        assertTrue(result instanceof EvalError, 
+        assertTrue(result instanceof EvalError,
                 "Expected EvalError for null find array, got: " + result);
     }
 
@@ -173,7 +182,7 @@ public class ReplaceEachPartitionTests extends GrelTestBase {
     public void testP6_nullReplaceArray_returnsError() {
         // Null replace array
         Object result = invoke("replaceEach", "abc", new String[]{"a"}, null);
-        assertTrue(result instanceof EvalError, 
+        assertTrue(result instanceof EvalError,
                 "Expected EvalError for null replace array, got: " + result);
     }
 
@@ -184,34 +193,34 @@ public class ReplaceEachPartitionTests extends GrelTestBase {
     @Test
     public void testBoundary_singleCharacterString() {
         // Minimal string that can contain a match
-        Object result = invoke("replaceEach", "a", 
+        Object result = invoke("replaceEach", "a",
                 new String[]{"a"}, new String[]{"b"});
-        assertEquals(result, "b");
+        assertEquals("b", result);
     }
 
     @Test
     public void testBoundary_singleCharacterNoMatch() {
         // Single character with no match
-        Object result = invoke("replaceEach", "x", 
+        Object result = invoke("replaceEach", "x",
                 new String[]{"a"}, new String[]{"b"});
-        assertEquals(result, "x");
+        assertEquals("x", result);
     }
 
     @Test
     public void testBoundary_emptyString() {
         // Empty string input
-        Object result = invoke("replaceEach", "", 
+        Object result = invoke("replaceEach", "",
                 new String[]{"a"}, new String[]{"b"});
-        assertEquals(result, "");
+        assertEquals("", result);
     }
 
     @Test
     public void testBoundary_overlappingPatterns() {
         // Patterns that could potentially overlap
-        Object result = invoke("replaceEach", "aaa", 
+        Object result = invoke("replaceEach", "aaa",
                 new String[]{"aa", "a"}, new String[]{"b", "c"});
         // First match wins
-        assertTrue(result instanceof String);
+        assertInstanceOf(String.class, result);
     }
 
     // ========================================================================
@@ -220,27 +229,27 @@ public class ReplaceEachPartitionTests extends GrelTestBase {
 
     @Test
     public void testP1_grelExpression_validMatch() throws ParsingException {
-        String test[] = { 
+        String test[] = {
             "\"The cow moos\".replaceEach([\"moo\"], [\"mee\"])",
-            "The cow mees" 
+            "The cow mees"
         };
         parseEval(bindings, test);
     }
 
     @Test
     public void testP2_grelExpression_noMatch() throws ParsingException {
-        String test[] = { 
+        String test[] = {
             "\"Hello world\".replaceEach([\"xyz\"], [\"abc\"])",
-            "Hello world" 
+            "Hello world"
         };
         parseEval(bindings, test);
     }
 
     @Test
     public void testP3_grelExpression_emptyArrays() throws ParsingException {
-        String test[] = { 
+        String test[] = {
             "\"abc\".replaceEach([], [])",
-            "abc" 
+            "abc"
         };
         parseEval(bindings, test);
     }
