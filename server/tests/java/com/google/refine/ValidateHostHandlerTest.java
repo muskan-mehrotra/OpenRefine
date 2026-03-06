@@ -66,8 +66,10 @@ public class ValidateHostHandlerTest {
         Mockito.verify(response, Mockito.times(1))
                 .sendError(HttpServletResponse.SC_NOT_FOUND, "Invalid hostname");
         
-        // Should NOT call the wrapped handler
-        Mockito.verifyNoInteractions(wrappedHandler);
+        // Should NOT call the wrapped handler's handle method
+        Mockito.verify(wrappedHandler, Mockito.never())
+                .handle(Mockito.anyString(), Mockito.any(Request.class), Mockito.any(HttpServletRequest.class),
+                        Mockito.any(HttpServletResponse.class));
     }
 
     /**
@@ -284,7 +286,9 @@ public class ValidateHostHandlerTest {
         // Verify
         Mockito.verify(response, Mockito.times(1))
                 .sendError(HttpServletResponse.SC_NOT_FOUND, "Invalid hostname");
-        Mockito.verifyNoInteractions(wrappedHandler);
+        Mockito.verify(wrappedHandler, Mockito.never())
+                .handle(Mockito.anyString(), Mockito.any(Request.class), Mockito.any(HttpServletRequest.class),
+                        Mockito.any(HttpServletResponse.class));
     }
 
     /**

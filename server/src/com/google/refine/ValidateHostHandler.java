@@ -63,6 +63,9 @@ class ValidateHostHandler extends HandlerWrapper {
     }
 
     public boolean isValidHost(String host) {
+        if (host == null) {
+            return false;
+        }
 
         // Allow loopback IPv4 and IPv6 addresses, as well as localhost
         if (LOOPBACK_PATTERN.matcher(host).find()) {
